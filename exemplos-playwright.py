@@ -1,3 +1,6 @@
+import base64
+import time
+
 from playwright.sync_api import sync_playwright
 
 
@@ -341,6 +344,53 @@ def exemplo_iframe():
     frame_element.locator('[id=page]').wait_for(timeout=10000)
     print(frame_element.locator('title').inner_text())
 
+
+def exemplo_check_and_radio_buttons():
+    page = sync_playwright().start().chromium.launch(headless=False).new_page()
+    page.goto("http://vanilton.net/web-test/input-types/")
+    page.locator('id=M').check()
+    print(page.locator('id=output').inner_text().__contains__('M') is True)
+    page.locator('id=Bike').check()
+    page.locator('id=Moto').check()
+    print(page.locator('id=Moto').is_checked())
+    print(page.locator('id=Bike').is_checked())
+    print(page.locator('id=Barco').is_checked())
+    print(page.locator('id=output-check').inner_text().__contains__('Bike' and 'Moto') is True)
+    screen = page.screenshot()
+    result = base64.b64encode(screen).decode();
+    print(result)
+
+def exemplo_save_images():
+    page = sync_playwright().start().chromium.launch(headless=False).new_page()
+    page.goto('http://lojafake.vanilton.net')
+    page.locator('img').first.wait_for(state='visible')
+    page.screenshot(path='image/loja-fake.png', full_page=True)
+    images = page.locator('img')
+    for i in range(images.count()):
+        nome = images.nth(i).get_attribute('name')
+        images.nth(i).screenshot(path=f'images/{nome}.png')
+
+def exemplo_loja_fake():
+    page = sync_playwright().start().chromium.launch(headless=False).new_page()
+    page.goto("http://lojafake.vanilton.net/")
+    page.locator("div:has-text(\"Usuário\")").nth(4).click()
+    page.locator("#mat-input-0").fill("admin")
+    page.locator("#mat-input-1").fill("1234")
+    page.locator("button:has-text(\"Login\")").click()
+    page.locator("text=Minhas Listas").click()
+    page.wait_for_url("http://lojafake.vanilton.net/#/drag-drop")
+    page.locator("text=Filmes").click()
+
+
+def exemplo_drag_drop_html5():
+    page = sync_playwright().start().chromium.launch(headless=False).new_page()
+    page.goto("http://vanilton.net/web-test/drag-drop/")
+    page.drag_and_drop("id=drag1", 'id=div2')
+    print(page.locator("[id='content1']").inner_text())
+    page.drag_and_drop("id=drag1", "id=div1")
+    print(page.locator("[id='content2']").inner_text())
+
+
 if __name__ == '__main__':
    #exemplo_de_interacao_captura()
    #exemplo_circulo_visivel()
@@ -361,4 +411,8 @@ if __name__ == '__main__':
    #exemplo_keyboard()
    #exemplo_evento_expect_request()
    #test_wait_add_remove_event_listener()
-   exemplo_iframe()
+   #exemplo_iframe()
+   #exemplo_check_and_radio_buttons()
+   #exemplo_save_images()
+   #exemplo_loja_fake()
+   exemplo_drag_drop_html5()

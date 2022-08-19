@@ -220,6 +220,126 @@ def exemplo_calculadora_subtracao():
     print(page.locator('html').inner_text())
 
 
+def exemplo_calculadora():
+    page = sync_playwright().start().chromium.launch(headless=False).new_page()
+    page.set_default_timeout(5000)
+    page.goto("http://vanilton.net/calculatorSoapPHP/")
+    page.locator("input >> nth=0").type("2", delay=1000)
+    select = page.locator('select:has-text("*")')
+    select.select_option(label="*")
+    page.locator("input >> nth=1").type("4", delay=1000)
+    page.locator("input[value='Resultado'] >> nth=0").click()
+    #resultado = page.locator('body').inner_text().split('\n')[0]
+    resultado = page.evaluate('x = document.getElementsByTagName("body")[0]; x.firstChild.textContent')
+    print(resultado)
+    # Raiz Quadrada
+    page.go_back()
+    page.reload()
+    page.locator('[name="num1"] >> nth=1').type("4", delay=1000)
+    page.locator('text="Resultado" >> nth=-1').click()
+    #resultado = page.locator('body').inner_text().split('\n')[0]
+    resultado = page.evaluate('x = document.getElementsByTagName("body")[0]; x.firstChild.textContent')
+    print(resultado)
+    page.go_back()
+    page.reload()
+    # Coseno
+    select = page.locator('select:has-text("Raiz")')
+    select.select_option(label="Coseno")
+    page.locator('[name="num1"] >> nth=1').type("5", delay=1000)
+    page.locator('text="Resultado" >> nth=-1').click()
+    #resultado = page.locator('body').inner_text().split('\n')[0]
+    resultado = page.evaluate('x = document.getElementsByTagName("body")[0]; x.firstChild.textContent')
+    print(resultado)
+
+def exemplo_evaluate_screen_size():
+    page = sync_playwright().start().chromium.launch(headless=False).new_page()
+    page.set_default_timeout(5000)
+    page.goto("http://vanilton.net/web-test/promise/")
+    # Cria o objeto window
+    object_handle = page.evaluate_handle('window')
+    print(object_handle.json_value())
+    # Passando por parâmetro um handle e recuperando seu innerHTML
+    body_handle = page.evaluate_handle('document.body')
+    body_text = page.evaluate("body => body.innerHTML", body_handle)
+    print(body_text)
+    # Tamanho da tela
+    width = page.evaluate_handle('window.screen.width')
+    height = page.evaluate_handle('window.screen.height')
+    print("Largura: {} - Altura: {}".format(width, height))
+    # Encerra a referência ao elemento
+    body_handle.dispose()
+    object_handle.dispose()
+
+
+def exemplo_element_handle():
+    page = sync_playwright().start().chromium.launch(headless=False).new_page()
+    page.goto("http://vanilton.net/blog")
+    href_element = page.query_selector("a")
+    print(href_element.inner_text())
+
+
+def exemplo_keyboard():
+    page = sync_playwright().start().chromium.launch(headless=False).new_page()
+    page.goto("https://google.com")
+    busca = page.locator('[name="q"]')
+    busca.focus()
+    page.keyboard.type("Hello World!", delay=500)
+    page.keyboard.press("ArrowLeft")
+    page.keyboard.down("Shift")  # down (segura a tecla)
+    for i in range(6):
+        page.keyboard.press("ArrowLeft", delay=1000)
+    page.keyboard.up("Shift")  # up (solta a tecla)
+    page.keyboard.press("Backspace")
+    print(busca.input_value())
+
+def exemplo_keyboard():
+    page = sync_playwright().start().chromium.launch(headless=False).new_page()
+    page.goto("https://keycode.info")
+    page.keyboard.type('Meta+a')
+    print(page.locator('div.item-event').inner_text())
+    page.screenshot(path='image/meu_primeiro_screenshot2.png', full_page=True)
+    page.locator('div.item-event').screenshot(path='image/card-event2.png')
+
+
+def print_request_sent(request):
+    print("Request sent: " + request.url)
+
+def print_request_finished(request):
+    print("Request finished: " + request.url)
+
+def print_request_response(request):
+    print("Request response: " + request.url)
+
+# Execute essa função e observe o console da IDE
+def test_wait_add_remove_event_listener():
+    page = sync_playwright().start().chromium.launch(headless=False).new_page()
+    page.on("request", print_request_sent)
+    page.on("response", print_request_response)
+    page.on("requestfinished", print_request_finished)
+    page.remove_listener("requestfinished", print_request_finished)
+    page.goto("https://ge.globo.com")
+    page.goto("https://wikipedia.org")
+
+
+def exemplo_evento_expect_request():
+    page = sync_playwright().start().chromium.launch().new_page()
+    #with page.expect_request("**/*teste*.png") as first:
+    with page.expect_request("**teste_agil-520x389.png") as first:
+        page.goto("http://vanilton.net/blog")
+    print(first.is_done())
+    print(first.value.headers)
+    print(first.value.url)
+    print(first.value.response())
+
+
+def exemplo_iframe():
+    page = sync_playwright().start().chromium.launch(headless=False).new_page()
+    page.goto("http://vanilton.net/web-test/iframe/")
+    frame_element = page.frame_locator('[name=iframe_artigos]')
+    print(frame_element.locator('title').inner_text())
+    page.locator('text=Como ser um facilitador?').click()
+    frame_element.locator('[id=page]').wait_for(timeout=10000)
+    print(frame_element.locator('title').inner_text())
 
 if __name__ == '__main__':
    #exemplo_de_interacao_captura()
@@ -233,5 +353,12 @@ if __name__ == '__main__':
    #exemplo_layout_locator()
    #exemplo_calculadora_subtracao()
    #exemplo_calculadora_multiplicacao()
-   exemplo_upload()
+   #exemplo_upload()
    #exemplo_multiple_upload()
+   #exemplo_calculadora()
+   #exemplo_evaluate_screen_size()
+   #exemplo_element_handle()
+   #exemplo_keyboard()
+   #exemplo_evento_expect_request()
+   #test_wait_add_remove_event_listener()
+   exemplo_iframe()

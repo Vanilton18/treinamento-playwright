@@ -1,4 +1,5 @@
 import base64
+import json
 import time
 
 from playwright.sync_api import sync_playwright
@@ -370,6 +371,21 @@ def exemplo_save_images():
         nome = images.nth(i).get_attribute('name')
         images.nth(i).screenshot(path=f'images/{nome}.png')
 
+
+#Resolve o problema de drag drop do angular
+def drag_drop_custom(page, source, target):
+    source.hover()
+    page.mouse.down()
+    print('Posição e tamanho do body: ' + page.locator('body').bounding_box().__str__())
+    print('Posição e tamanho do source: ' + source.bounding_box().__str__())
+    print('Posição e tamanho do target: ' + target.bounding_box().__str__())
+    box = target.bounding_box()
+    print('Movendo source para target em: ' + (box['x'] + box['width'] / 2, box['y'] + box['height'] / 2).__str__())
+    # Mover para o centro do elemento relativo ao tamanho da página (x,y)
+    page.mouse.move(box['x'] + box['width'] / 2, box['y'] + box['height'] / 2)
+    target.hover()
+    page.mouse.up()
+
 def exemplo_loja_fake():
     page = sync_playwright().start().chromium.launch(headless=False).new_page()
     page.goto("http://lojafake.vanilton.net/")
@@ -380,7 +396,9 @@ def exemplo_loja_fake():
     page.locator("text=Minhas Listas").click()
     page.wait_for_url("http://lojafake.vanilton.net/#/drag-drop")
     page.locator("text=Filmes").click()
-
+    drag_drop_custom(page, page.locator("div:text('3 - O Poderoso Chefão II')"), page.locator("#cdk-drop-list-2"))
+    page.wait_for_timeout(3000)
+    print(page.locator("#cdk-drop-list-2").inner_text())
 
 def exemplo_drag_drop_html5():
     page = sync_playwright().start().chromium.launch(headless=False).new_page()
@@ -391,7 +409,160 @@ def exemplo_drag_drop_html5():
     print(page.locator("[id='content2']").inner_text())
 
 
+def exemplo_context_trace():
+    browser = sync_playwright().start().chromium.launch(timeout=60000)
+    context = browser.new_context()
+    context.tracing.start(snapshots=True, screenshots=True, sources=True)
+    page = context.new_page()
+    page.goto("http://lojafake.vanilton.net/")
+    page.locator("div:has-text(\"Usuário\")").nth(4).click()
+    page.locator("#mat-input-0").fill("admin")
+    page.locator("#mat-input-1").fill("1234")
+    page.locator("button:has-text(\"Login\")").click()
+    page.locator("text=Minhas Listas").click()
+    page.wait_for_url("http://lojafake.vanilton.net/#/drag-drop")
+    page.locator("text=Filmes").click()
+    drag_drop_custom(page, page.locator("div:text('3 - O Poderoso Chefão II')"), page.locator("#cdk-drop-list-2"))
+    page.wait_for_timeout(3000)
+    print(page.locator("#cdk-drop-list-2").inner_text())
+    context.tracing.stop(path='trace/trace_loja_fake.zip')
+    browser.close()
+
+
+def exemplo_confs():
+    browser = sync_playwright().start().chromium.launch(headless=False)
+    context = browser.new_context(
+        viewport={'width': 1024, 'height': 720}
+    )
+    context.tracing.start(snapshots=True, screenshots=True, sources=True)
+    page = context.new_page()
+    #page.set_default_navigation_timeout(1000)
+    page.goto('https://google.com')
+    print('Site ta up')
+    page.set_default_timeout(5000)
+    page.locator('area-principal2').click()
+
+
+def preenche_input(page, label, value):
+    page.locator(f"//div[contains(.,'{label} *')]/input").fill()
+
+def loja_fake_cadastro_usuario():
+    browser = sync_playwright().start().chromium.launch(headless=False)
+    context = browser.new_context()
+    context.tracing.start(snapshots=True, screenshots=True, sources=True)
+    page = context.new_page()
+    page.goto("http://lojafake.vanilton.net/#/usuarios")
+    page.locator('button', has_text='Novo Usuário').click()
+    page.locator('mat-card:has-text("Novo") >> input >> nth=0').fill('mario.mario')
+    page.locator('mat-card:has-text("Novo") >> input >> nth=1').fill('Mario Mario')
+    page.locator('mat-card:has-text("Novo") >> input >> nth=2').fill('mario.mario@mario.mario')
+    page.locator('mat-card:has-text("Novo") >> input >> nth=3').fill('mario')
+    page.locator('button:has-text("Salvar")').click()
+    page.wait_for_selector('tr:has-text("mario")')
+    print(page.locator('table >> tr', has_text='mario.mario').is_visible() == True)
+
+
+def contexto_vida():
+    browser = sync_playwright().start().chromium.launch(headless=False)
+    #Criando dois contextos
+    context = browser.new_context()
+    context2 = browser.new_context()
+    # Criar paginas para o contexto
+    pagec1 = context.new_page()
+    pagec1.pause()
+    pagec1_1 = context.new_page()
+    pagec2 = context2.new_page()
+    pagec2_2 = context2.new_page()
+    pagec1.goto("http://lojafake.vanilton.net/#/usuarios")
+    pagec2.goto("https://fpftech.com")
+    pagec2_2.goto('https://google.com')
+    pagec1_1.goto('https://bing.com')
+
+
+def context_propriedades():
+    browser = sync_playwright().start().chromium.launch(headless=False)
+    context = browser.new_context(
+        geolocation={'longitude': 12.492348, 'latitude': 41.890221},
+        permissions=['geolocation'],
+        record_video_dir='video/',
+        record_video_size={'width': 800, 'height': 600},
+        timezone_id="Europe/Rome",
+        locale="it-IT"
+    )
+    page = context.new_page()
+    page.goto("https://maps.google.com")
+    page.locator("button[aria-label='Mostra la tua posizione']").click()
+
+
+def exemplo_input_file():
+    page = sync_playwright().start().chromium.launch(headless=False).new_page()
+    page.set_default_timeout(5000)
+    page.goto("https://google.com")
+    page.screenshot(full_page=True, path='google.png')
+    page.goto("http://vanilton.net/web-test/upload/")
+    page.locator('input#fileToUpload').set_input_files('google.png')
+    page.locator('[name=submit]').click()
+    print(page.locator('a').get_attribute('href'))
+
+def exemplo_multiple_upload():
+    page = sync_playwright().start().chromium.launch(headless=False).new_page()
+    page.set_default_timeout(5000)
+    page.goto("https://google.com")
+    page.goto('http://vanilton.net/web-test/upload/multiple')
+    page.locator('id=filesToUpload').set_input_files(['google.png', 'meu_pdf_maroto.pdf'])
+    page.locator('id=filesToUpload').set_input_files([])
+
+
+def storage_restore():
+    pessoa = '[{"id": "1659127786998", "name": "Vanilton Pinheiro", "email": "vanilton18@gmail.com", "photo": ""}]'
+    browser = sync_playwright().start().chromium.launch(headless=False)
+    context = browser.new_context(storage_state={
+        "origins": [
+            {
+                "origin": "https://vanilton18.github.io",
+                "localStorage": [{"name": "ng2-webstorage|pessoa", "value": pessoa}],
+            }
+        ]
+    })
+    page = context.new_page()
+    page.goto("https://vanilton18.github.io/crud-local-storage-angular/")
+    print(context.storage_state())
+    print(page.locator('div.card').all_inner_texts().__str__());
+
+
+def test_manipule_localstorage_evaluate():
+    pessoa = '[{"id": "1659127786998", "name": "Vanilton Pinheiro", "email": "vanilton18@gmail.com", "photo": ""}]'
+    pessoa_dict = json.dumps(pessoa)
+    browser = sync_playwright().start().chromium.launch(headless=False)
+    context = browser.new_context()
+    # Com evaluate script
+    page = context.new_page()
+    page.goto("https://vanilton18.github.io/crud-local-storage-angular/")
+    page.evaluate(f'window.localStorage.setItem("ng2-webstorage|pessoa",{pessoa_dict})')
+    # eis o problema
+    page.reload()
+    print(page.evaluate("window.localStorage.getItem('ng2-webstorage|pessoa');"))
+    print(page.locator('div.card').all_inner_texts().__str__())
+
+def globo_esporte_storage():
+    browser = sync_playwright().start().chromium.launch(headless=False)
+    context = browser.new_context()
+    # Com evaluate script
+    page = context.new_page()
+    page.goto("https://google.com")
+    context.storage_state(path='storage-gg.json')
+
+
 if __name__ == '__main__':
+    globo_esporte_storage()
+    #storage_restore()
+    #exemplo_input_file()
+    #exemplo_multiple_upload()
+    #context_propriedades()
+    #contexto_vida()
+    #loja_fake_cadastro_usuario()
+    #exemplo_confs()
+    #exemplo_context_trace()
    #exemplo_de_interacao_captura()
    #exemplo_circulo_visivel()
    #exemplos_xpath()
@@ -415,4 +586,5 @@ if __name__ == '__main__':
    #exemplo_check_and_radio_buttons()
    #exemplo_save_images()
    #exemplo_loja_fake()
-   exemplo_drag_drop_html5()
+   #exemplo_drag_drop_html5()
+   #exemplo_loja_fake()
